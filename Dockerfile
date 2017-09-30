@@ -1,4 +1,4 @@
-FROM alpine
+FROM johnsandiford/kodi-headless:latest
 
 MAINTAINER RCGCoder <ricardo.cantabran@gmail.com>
 
