@@ -1,7 +1,7 @@
 'use strict';
-const PlugManager = require('lib/PlugManager');
-const KodiManager = require('lib/KodiManager');
-const TabletManager = require('lib/TabletManager');
+const PlugManager = require('PlugManager.js');
+const KodiManager = require('KodiManager.js');
+const TabletManager = require('TabletManager.js');
 
 module.exports = class MainManager {
 
