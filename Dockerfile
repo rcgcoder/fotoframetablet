@@ -13,19 +13,3 @@ RUN wget http://security.ubuntu.com/ubuntu/pool/universe/k/kodi/kodi-eventclient
 RUN dpkg -i *.deb
 RUN rm *.deb
 
-RUN mkdir -p /usr/src/app 
-RUN mkdir -p /usr/src/app/src
-RUN mkdir -p /usr/src/app/src/tplink
-RUN mkdir -p /usr/src/app/src/config
-
-WORKDIR /usr/src/app
-RUN wget https://raw.githubusercontent.com/RCGCoder/tplink-hs100/master/tplink-hub/package.json
-RUN wget https://raw.githubusercontent.com/RCGCoder/tplink-hs100/master/tplink-hub/index.js
-RUN npm install
-RUN npm install exec-async
-
-WORKDIR /usr/src/app/src/tplink
-RUN wget https://raw.githubusercontent.com/RCGCoder/tplink-hs100/master/tplink-hub/src/tplink/index.js
-
-WORKDIR /usr/src/app/src/config
-RUN wget https://raw.githubusercontent.com/RCGCoder/tplink-hs100/master/tplink-hub/src/config/logger.js
