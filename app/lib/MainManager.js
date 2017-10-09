@@ -1,10 +1,9 @@
 'use strict';
-const PlugManager = require('PlugManager.js');
-const KodiManager = require('KodiManager.js');
-const TabletManager = require('TabletManager.js');
+const PlugManager = require('./PlugManager.js');
+const KodiManager = require('./KodiManager.js');
+const TabletManager = require('./TabletManager.js');
 
 module.exports = class MainManager {
-
   constructor(config) {
 	  var self=this;
 	  self.config=config;
@@ -87,7 +86,7 @@ module.exports = class MainManager {
 					if (!status.tabletScreenSaverOn){
 						if(status.kodiOn){ // if kodi is on.... we can launch screensaver
 							self.kodi.screenSaver();
-						} else if (status.homeOn)){ // if home is on.... we can launch kodi+screensaver
+						} else if (status.homeOn){ // if home is on.... we can launch kodi+screensaver
 							self.kodi.on(true); // the parameter true says to start screensaver when load.
 						} else { // another forget an app is in front when docked the tablet. 
 							self.tablet.restart(); // now restarting.....to close all apps and in the next test start kodi+screensaver
@@ -130,6 +129,8 @@ module.exports = class MainManager {
 	    	iDockedKnown=iDockedStatusKnown;
 	    }
 	    
+	    var arrConfigs=[];
+
 	  	var status={
 	  			manager:self,
   				plugOn:false,
@@ -212,9 +213,7 @@ module.exports = class MainManager {
   };
   
   
-
-
-  const arrConfigs=[];
+/*
 
   for (var i=0;i<arrConfigs.length;i++){
   	var config=arrConfigs[i];
@@ -251,12 +250,6 @@ module.exports = class MainManager {
   			plug.off();
   		}
   	}
-  	
-  	
-  	
-  }
-
-
-
+  }*/
 
 }
