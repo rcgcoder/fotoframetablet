@@ -4,6 +4,49 @@ var BaseUtils=require("./BaseUtils.js");
 var StringUtils=require("./StringUtils.js");
 var LogUtils=require("./LogUtils.js");
 
+class ChronoInfo{
+	constructor(process){
+		var self=this;
+		self.process=process;
+		self.start=0;
+		self.desperdiciado=0;
+		self.ciclo=0;
+		self.startCiclo=0;
+	}
+	run(tInicioDesperdiciado){
+		if (!this.process.enabled) return;
+		var auxDesperdiciado=tInicioDesperdiciado;
+		var tNow=new Date().getTime();
+		if (isUndefined(tInicioDesperdiciado)){
+			this.start=tNow;
+			auxDesperdiciado=this.start;
+		} else {
+			this.start=tInicioDesperdiciado;
+			auxDesperdiciado=tInicioDesperdiciado;
+		}
+		this.startCiclo=this.start;
+		tNow=new Date().getTime();
+		this.desperdiciado=(tNow-auxDesperdiciado);
+	}
+    newCiclo(){
+	   if (!this.process.enabled) return;
+	   this.ciclo++;
+	   this.startCiclo=new Date().getTime();
+    }
+    getCuantoLleva(){
+		if (!this.process.enabled) return;
+		var tActual=new Date().getTime();
+		var tLleva=tActual-this.start;
+		return tLleva;
+    }
+    getCuantoLlevaCiclo(){
+		if (!this.process.enabled) return;
+		var tActual=new Date().getTime();
+		var tLlevaCiclo=tActual-this.startCiclo;
+		return tLlevaCiclo;
+    }
+}
+
 class Chrono{
 	constructor(sNombreCompleto,sNombre,nivelAnidamiento,padre){
 		var self=this;
@@ -17,6 +60,13 @@ class Chrono{
 		self.padre=padre;
 		self.hijos=[];
 		self.desperdiciado=0;
+	}
+	getTotalDesperdiciado(){
+		var iDesp=this.desperdiciado;
+		for (var i=0;i<this.hijos.length;i++){
+			iDesp+=this.hijos[i].getTotalDesperdiciado();
+		}
+		return iDesp;
 	}
 }
 
@@ -58,9 +108,27 @@ class processChronos{
 		}
 		return [sNombre,sNombreCompleto];
 	}
-	chronoStart(nombre,sInfoAuxiliar){
-		var tInicio=new Date().getTime();
+	chronoStartFunction(sInfoAuxiliar,nIndex){
+		var newIndex=1
+		if (isDefined(nIndex)){
+			newIndex+=nIndex;
+		}
+		return this.chronoStart("",sInfoAuxiliar,newIndex);
+	}
+	chronoStopFunction(){
+		var newIndex=1
+		if (isDefined(nIndex)){
+			newIndex+=nIndex;
+		}
+		return this.chronoStop("",newIndex);
+	}
+	chronoStart(theName,sInfoAuxiliar,iFuncName){
 		if (!this.enabled) return;
+		var tInicio=new Date().getTime();
+		var nombre=theName;
+		if (isDefined(iFuncName)){
+			nombre=getFunctionName(iFuncName+1);
+		} 
 		var arrNames=this.prepareNames(nombre,sInfoAuxiliar);
 		var sNombre=arrNames[0];
 		var sNombreCompleto=arrNames[1];
@@ -85,28 +153,28 @@ class processChronos{
 		var acumCronos=this.mapCronos[sNombreCompleto];
 		this.lastCrono.push(acumCronos);
 		var cronos=acumCronos.cronos;
-		var crono={start:0,desperdiciado:0};
-		
+		var crono=new ChronoInfo(this);
 		cronos.push(crono);
 		if (cronos.length>acumCronos.profundidad){
 			acumCronos.profundidad=cronos.length;
 		}
-		crono.start=new Date().getTime();
-		crono.desperdiciado=(crono.start-tInicio);
+		crono.run(tInicio);
+		return crono;
 	}
-	chronoStop(nombre){
-		var tInicio=new Date().getTime();
+	chronoStop(theName,iFuncName){
 		if (!this.enabled) return;
-
-		var sNombre=this.lastCrono.pop().nombre;
+		var tInicio=new Date().getTime();
+		var nombre=theName;
+		if (isDefined(iFuncName)){
+			nombre=getFunctionName(iFuncName+1);
+		} 
+		var lastChrono=this.lastCrono.pop();
+		var sNombre=lastChrono.nombreCorto;
 		if (isDefined(nombre)){
-			var arrNames=this.prepareNames(nombre);
-			var sAuxNombre=arrNames[0];
-			var sAuxNombreCompleto=arrNames[1];
-			if (sAuxNombreCompleto!=sNombre){
-				log("Error haciendo Stop. Nombre:"+nombre+" lastCrono:"+sNombre);
+			if (nombre!=sNombre){
+				log("Error haciendo Stop. Nombre:"+nombre+" lastCrono Nombre Corto:"+sNombre);
 			}
-			sNombre=sAuxNombreCompleto;
+			sNombre=lastChrono.nombre;
 		}
 		var sNombreCompleto="";
 		this.nivelAnidamiento--;
@@ -126,6 +194,9 @@ class processChronos{
 		var tResult=timeAct-crono.start;
 		acumCronos.acumulado+=tResult;
 		acumCronos.desperdiciado+=((timeAct-tInicio)+crono.desperdiciado);
+		if (acumCronos.acumulado<acumCronos.desperdiciado){
+			log("No coinciden");
+		}
 		return tResult;
 	}
 }
@@ -156,11 +227,33 @@ class ChronoFactory{
 		var sPID=process.pid;
 		this.chronos[sPID]=undefinedValue;
 	}
+	chronoStartFunction(sInfoAuxiliar,nIndex){
+		var newIndex=1
+		if (isDefined(nIndex)){
+			newIndex+=nIndex;
+		}
+		return this.getChronos().chronoStart("",sInfoAuxiliar,newIndex);
+	}
+	chronoStopFunction(nIndex){
+		var newIndex=1
+		if (isDefined(nIndex)){
+			newIndex+=nIndex;
+		}
+		return this.getChronos().chronoStop("",newIndex);
+	}
 	chronoStart(nombre,sInfoAuxiliar){
-		this.getChronos().chronoStart(nombre,sInfoAuxiliar);
+		return this.getChronos().chronoStart(nombre,sInfoAuxiliar);
 	}
 	chronoStop(nombre){
-		this.getChronos().chronoStop(nombre);
+		return this.getChronos().chronoStop(nombre);
+	}
+	traceBlock(sLabel,sValue,sMeasure){
+		var sRowSeparator=", ";
+		var sFieldSeparator="";
+		return sRowSeparator
+				+sFieldSeparator+(isDefined(sLabel)?sLabel+":":"")
+				+sFieldSeparator+(isDefined(sValue)?sValue:"")
+				+sFieldSeparator+(isDefined(sMeasure)?sMeasure:"");
 	}
 	listaCrono(acumCronos){
 		if (!this.enabled) return;
@@ -181,21 +274,40 @@ class ChronoFactory{
 				cronoPadre=cronoPadre.padre;
 			}
 		} 
-		porcTotal=acumCronos.acumulado/pChronos.tTotal;
+		var tDespTotal=acumCronos.getTotalDesperdiciado();
+		var tDespHijos=tDespTotal-acumCronos.desperdiciado;
 		
-		var porcDesp=acumCronos.desperdiciado/pChronos.tTotal;
-		var sLog=sTabs+ acumCronos.nombreCorto+
-				" ("+acumCronos.veces+")"+
-				"\t, Operaciones:\t"+acumCronos.veces+
-				"\t, T Desp:\t"+inSeconds(acumCronos.desperdiciado/1000,false)+"\ts \t"
-					+ inPercent(porcDesp) +
-				"\t, T Acum:\t"+inSeconds(acumCronos.acumulado/1000,false) +"\ts \t" +inPercent(porcTotal)+
-				(padre!=""?"\t, % Padre:\t"+ inPercent(porcPadre)+"\t "+" Multip:\t"+nMultip.toFixed(2):"\t\t\t\t") +
-				"\t, Rend:\t"+ (acumCronos.veces*1000/acumCronos.acumulado).toFixed(2)+"\t op/s"+
-				"\t y \t"+ (acumCronos.acumulado/acumCronos.veces).toFixed(5)+"\t ms/op"+
-				"\t, Prf Max:\t"+acumCronos.profundidad+
-				"\t, Act:\t"+acumCronos.cronos.length +
-				"\t, Anid:\t"+acumCronos.anidamiento ;
+		porcTotal=acumCronos.acumulado/pChronos.tTotal;
+				
+		var tReal=acumCronos.acumulado-tDespTotal;
+		var porcDesp=tDespTotal/acumCronos.acumulado;
+		
+		var sLog=sTabs+ acumCronos.nombreCorto+" ("+acumCronos.veces+"),";
+		sLog+=this.traceBlock("Operaciones",acumCronos.veces);
+		sLog+=this.traceBlock("T Real",inSeconds(tReal,false),"s");
+		sLog+=this.traceBlock("T Acum",inSeconds(acumCronos.acumulado,false));
+		sLog+=this.traceBlock("% Acum",inPercent(porcTotal));
+		sLog+=this.traceBlock("T Desp",inSeconds(tDespTotal,false));
+		if (acumCronos.hijos.length>0){
+			sLog+=this.traceBlock("T Desp Hijos",inSeconds(tDespHijos,false));
+		} else {
+			sLog+=this.traceBlock();
+		}
+		sLog+=this.traceBlock("% Desp",inPercent(porcDesp));
+		if (padre!=""){
+			sLog+=this.traceBlock("% Padre",inPercent(porcPadre));
+			sLog+=this.traceBlock("Multip",nMultip.toFixed(2));
+		} else {
+			sLog+=this.traceBlock();
+			sLog+=this.traceBlock();
+		}
+		sLog+=this.traceBlock("Rend Real(op/s)",(acumCronos.veces*1000/tReal).toFixed(2),"op/s");
+		sLog+=this.traceBlock("Rend Real(ms/op)",(tReal/acumCronos.veces).toFixed(5),"ms/op");
+		sLog+=this.traceBlock("Rend (op/s)",(acumCronos.veces*1000/acumCronos.acumulado).toFixed(2),"op/s");
+		sLog+=this.traceBlock("Rend (ms/op)",(acumCronos.acumulado/acumCronos.veces).toFixed(5),"ms/op");
+		sLog+=this.traceBlock("Deep Max",acumCronos.profundidad);
+		sLog+=this.traceBlock("Act",acumCronos.cronos.length);
+		sLog+=this.traceBlock("Anid",acumCronos.anidamiento);
 		sLog=replaceAll(sLog, "\\.", ","); 
 		log(sLog);
 		if (iProf<=this.listaProfundidadMaxima) {
@@ -215,7 +327,7 @@ class ChronoFactory{
 			}
 		}
 		pChronos.tTotal=tTotal;
-		log("Listando "+pChronos.allCronos.length +" cronometros ("+(tTotal/1000)+"s)");
+		log("Listando "+pChronos.allCronos.length +" cronometros ("+inSeconds(tTotal)+")");
 /*		this.allCronos.sort(function(a,b){
 			if (this.withNombreCompleto) {
 				if (a.nombre<b.nombre){
@@ -244,12 +356,19 @@ class ChronoFactory{
 		}
 	}
 }
-
-global.chronoFactory=new ChronoFactory(); 	
+if (isUndefined(global.chronoFactory)){
+	global.chronoFactory=new ChronoFactory();
+}
 
 class ChronoUtils{
 	constructor(){
 		log("Creating ChronoUtils");
+	}
+	chronoStartFunction(sInfoAuxiliar){
+		return chronoFactory.chronoStartFunction(sInfoAuxiliar,1);
+	}
+	chronoStopFunction(){
+		return chronoFactory.chronoStopFunction(1);
 	}
 	chronoStart(sNombre,sExtraInfo){
 //		log("Start Chrono:"+sNombre);
