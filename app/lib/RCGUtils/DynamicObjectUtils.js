@@ -1,16 +1,24 @@
 'use strict';
 var math = require('mathjs');
+/*
+All of the libs are allready loaded
 var BaseUtils=require("./BaseUtils.js");
 var StringUtils=require("./StringUtils.js");
 var LogUtils=require("./LogUtils.js");
 var ChronoUtils=require("./ChronoUtils.js");
 var HashMapUtils=require("./HashMapUtils.js");
-
+*/
 class DynamicObject{
 	constructor(theFactory,nombre,arrAtributosListado,arrAtributos,arrAtributosPorcs){
 		var self=this;
 		var factoria=theFactory;
-		self.factoria=theFactory;
+		self.factoria=factoria;
+		self.parentFactorys=[];
+		self.parentFactorys.push(factoria);
+		self.extend=factoria.extend;
+		self.getParentAttribute=factoria.getParentAttribute;
+		self.getParentMethod=factoria.getParentMethod;
+		self.executeParentMethod=factoria.executeParentMethod;
 		self.nombre=nombre;
 		self.global=global;
 		self.tiposAtributos=newHashMap(); // lista de nombres de atributos, tipo, etc
@@ -41,18 +49,19 @@ class DynamicObject{
 		self.configFromExcel=factoria.configFromExcel;
 		self.loadFromExcel=factoria.loadFromExcel;
 		self.loadFromExceAsync=factoria.loadFromExceAsync;
+		self.generarTipos=factoria.generarTipos;
 		self.interno_execFunction=factoria.interno_execFunction;
 		self.vaciar=factoria.vaciar;
 		var auxAttsListado=[];
 		var auxAttsValor=[];
 		var auxAttsPorcs=[];
-		if (typeof arrAtributosListado!=="undefined"){
+		if (isDefined(arrAtributosListado)){
 			auxAttsListado=arrAtributosListado;
 		}
-		if (typeof arrAtributos!=="undefined"){
+		if (isDefined(arrAtributos)){
 			auxAttsValor=arrAtributos;
 		}
-		if (typeof arrAtributosPorcs!=="undefined"){
+		if (isDefined(arrAtributosPorcs)){
 			auxAttsPorcs=arrAtributosPorcs;
 		}
 		self.procesarTodosAtributos(auxAttsListado,auxAttsValor,auxAttsPorcs);
@@ -67,7 +76,7 @@ class FactoriaObjetos{
 		
 	}
 	getFactoriaGlobal(nombre){
-		return this.hsFactoriasGlobales.getValor();
+		return this.hsFactoriasGlobales.getValor(nombre);
 	}
 	addFactoriaGlobal(factoria){
 		this.hsFactoriasGlobales.add(factoria.nombre,factoria);
@@ -81,7 +90,7 @@ class FactoriaObjetos{
 		var self=this;
 		var obj=new DynamicObject(self,nombre,arrAtributosListado,arrAtributos,arrAtributosPorcs);
 		self.nFactorias++;
-		if (isGlobal){
+		if (isDefined(isGlobal)&&isGlobal){
 			this.addFactoriaGlobal(obj);
 		}
 		return obj;
@@ -415,6 +424,7 @@ class FactoriaObjetos{
 						if (tipoDoc!=""){
 							var objTipoDoc=tiposDocumento.getValor(tipoDoc);
 							if (tipoDoc==""){
+								log("El tipo de documento:"+tipoDoc+" no existe en la lista de tipos");
 								alert("El tipo de documento:"+tipoDoc+" no existe en la lista de tipos");
 								tiposDocumento.traza();
 							}
@@ -442,6 +452,7 @@ class FactoriaObjetos{
 									arrFases.push(objFase);
 								}
 								if (arrFases.length<=0){
+									log("Existe un error en la identificacion de la fase:"+fase+" subfase:"+subfase);
 									alert("Existe un error en la identificacion de la fase:"+fase+" subfase:"+subfase);
 								} else {
 									fase=arrFases;
@@ -730,6 +741,8 @@ class FactoriaObjetos{
 			newObj.getFactoria=this.interno_getFactoria;
 			newObj.getId=this.interno_getId;
 			newObj.getNombre=this.interno_getNombre;
+			newObj.generarTipos=this.generarTipos;
+			
 			this.listado.add(newObj.id,newObj);
 	/*		newObj.addAtributoLista=this.objAddAtributoLista;
 			newObj.addAtributo=this.objAddAtributo;
@@ -746,9 +759,11 @@ class FactoriaObjetos{
 			if (typeof id!=="undefined"){
 				objNew.setID(id);
 			}
-			if (typeof this.childConstructor!=="undefined"){
+			if (isDefined(this.childConstructor)){
 				objNew.theConstructor=this.childConstructor;
 				objNew.theConstructor();
+			} else {
+				objNew.factoria.executeParentMethod("childConstructor");
 			}
 			chronoStopFunction();
 			return objNew;
@@ -858,7 +873,7 @@ class FactoriaObjetos{
 		}
 	configFromExcel(excelWorkBook){
 			  var shtAct = excelWorkBook.Sheets[this.nombre];
-			  shtAct.getCell=factoriaObjetos.getCell;
+			  shtAct.getCell=this.factoria.getCell;
 			  var iRow=4;
 			  var iCol=0;
 			  var sVal=shtAct.getCell(iRow,iCol);
@@ -967,7 +982,7 @@ class FactoriaObjetos{
 				  shtNombreAux=sNombreSheet;
 			  }
 			  var shtAct = excelWorkBook.Sheets[shtNombreAux];
-			  shtAct.getCell=factoriaObjetos.getCell;
+			  shtAct.getCell=this.factoria.getCell;
 			  var iRowCampos=4;
 			  var iRow=6;
 			  var iCol=0;
@@ -980,6 +995,7 @@ class FactoriaObjetos{
 				  var sValorCampo=shtAct.getCell(1,0);
 				  var infoCampo=this.tiposAtributos.getValor(sIdCampo);
 				  if (infoCampo==""){
+					  log("El campo "+sIdCampo+" no existe en la configuración de la factoria " + factoria.nombre);
 					  alert("El campo "+sIdCampo+" no existe en la configuración de la factoria " + factoria.nombre);
 				  }
 				  var sTipo=infoCampo.tipo;
@@ -1015,6 +1031,7 @@ class FactoriaObjetos{
 							  
 							  var infoCampo=this.tiposAtributos.getValor(sIdCampo);
 							  if (infoCampo==""){
+								  log("El campo "+sIdCampo+" no existe en la configuración de la factoria " + factoria.nombre);
 								  alert("El campo "+sIdCampo+" no existe en la configuración de la factoria " + factoria.nombre);
 							  }
 							  if (infoCampo.tipo=="Referencia"){
@@ -1100,18 +1117,20 @@ class FactoriaObjetos{
 								}else if ((subtipo=="Texto")||(subtipo=="")){
 									obj["set"+idCampo+idSubCampo](vValor);
 								} else if (subtipo.indexOf("[")<0) { // no es un array
-									var oFactoria=factoriaObjetos.getFactoriaGlobal(subtipo+"s");
+									var oFactoria=this.factoria.getFactoriaGlobal(subtipo+"s");
 									if (oFactoria!=""){
 										var objRef=oFactoria.getById(vValor);
 										if (idCampo=="FormatoElectronico"){
 											log(idCampo);
 										}
 										if (objRef==""){
+											log("Error en fila ("+iCol+","+iRow+") al procesar la relacion con:"+vValor);
 											alert("Error en fila ("+iCol+","+iRow+") al procesar la relacion con:"+vValor);
 										} else {
 											obj["set"+idCampo+idSubCampo](objRef);
 										}
 									} else {
+										log("Error en fila ("+iCol+","+iRow+") al procesar no se localiza la factoria:"+subtipo+"s");
 										alert("Error en fila ("+iCol+","+iRow+") al procesar no se localiza la factoria:"+subtipo+"s");
 									}
 								} else { // es un array JSON
@@ -1125,6 +1144,7 @@ class FactoriaObjetos{
 										iVal++;
 									}
 									if (!bEncontrado){
+										log("Error en fila ("+iCol+","+iRow+") al procesar no se localiza el tipo:"+vValor+" en "+subtipo);
 										alert("Error en fila ("+iCol+","+iRow+") al procesar no se localiza el tipo:"+vValor+" en "+subtipo);
 									} else {
 										obj["set"+idCampo+idSubCampo](vValor);
@@ -1249,6 +1269,61 @@ class FactoriaObjetos{
 			procesaOffline(iRow,vUndef,fncAsyncLoadRows,"Filas ("+this.nombre+")",fncEndAsyncLoadRows,vUndef,3);
 		}
 	
+	extend(objLib){
+		var objBase=this;
+    	objBase.parentFactorys.push(objLib);
+		objBase.childConstructor=objLib.childConstructor;
+/*		if (isDefined(objBase.childConstructor)){
+			var fncOldChildConstructor=objBase.childConstructor;
+			objBase.childConstructor=function(){
+				fncOldChildConstructor();
+				objLib.childConstructor();
+			}
+		} else {
+		}
+		*/
+		
+	}
+	
+	getParentAttribute(sAttName){
+		var self=this;
+		if(isUndefined(self.parentFactorys)) return "";
+		for (var i=(self.parentFactorys.length-1);i>=0;i--){
+			var factory=self.parentFactorys[i];
+			if (isDefined(factory[sAttName])){
+				return {object:factory,attribute:factory[sAttName]};
+			}
+		}
+		return "";
+	}
+	getParentMethod(sMethodName){
+		var self=this;
+		var result=self.getParentAttribute(sMethodName);
+		if (isMethod(result.attribute)){
+			result.method=result.attribute;
+			return result;
+		}
+		return "";
+	}
+	executeParentMethod(sMethodName,arrParameters){
+		var fncParent=this.getParentMethod(sMethodName);
+		var objResult="";
+		if (fncParent!=""){
+			objResult=fncParent.object[sMethodName].apply(this,arrParameters);
+		}
+		return objResult;
+	}
+	
+	generarTipos(objParent){
+		this.listado.recorrer(function(dynobjTipo){
+			if (isDefined(dynobjTipo.generarTipo)){
+				dynobjTipo.generarTipo(objParent);
+			} else {
+				dynobjTipo.factoria.executeParentMethod("generarTipo",[objParent]);
+			}
+		});
+	}
+
 
 /*	newPorcentaje(sCampoReferencia,sNuevoCampo){
 		return {nombreCampoReferencia:sCampoReferencia,
@@ -1351,9 +1426,22 @@ if (isUndefined(global.baseDynamicObjectFactory)){
  
 
 class DynamicObjectUtils{
-	newDynamicObjectFactory(nombre,isGlobal,arrAtributosListado,arrAtributos,arrAtributosPorcs){
-		var obj=baseDynamicObjectFactory.nuevaFactoria(nombre,isGlobal,arrAtributosListado,arrAtributos,arrAtributosPorcs);
+	newDynamicObjectFactory(arrAtributosListado,arrAtributos,arrAtributosPorcs,globalName){
+		var sName="";
+		var isGlobal=false;
+		if (isDefined(globalName)){
+			isGlobal=true;
+			sName=globalName;
+		}
+		var obj=baseDynamicObjectFactory.nuevaFactoria(sName,isGlobal,arrAtributosListado,arrAtributos,arrAtributosPorcs);
 		return obj;
+	}
+	newDynamicObjectFactoryFromFile(sDefinitionFile,globalName){
+		var objBase=newDynamicObjectFactory(undefined,undefined,undefined,globalName);
+    	var vLib=require("../"+sDefinitionFile);
+    	var objLib=new vLib(objBase);
+    	objBase.extend(objLib);
+		return objBase;
 	}
 }
 

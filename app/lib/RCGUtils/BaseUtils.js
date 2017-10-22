@@ -11,10 +11,10 @@ function isDefined(variable){
 	return (typeof variable!=="undefined");
 }
 function isString(variable){
-	return (typeof variable=="string");
+	return (typeof variable==="string");
 }
 function isArray(variable){
-	return (typeof variable=="array");
+	return Array.isArray(variable);
 }
 
 
@@ -68,12 +68,6 @@ if (isUndefined(global.undefinedValue)){
 }
 if (isUndefined(global.fncEmpty)){
 	global.fncEmpty=fncEmpty;
-}
-if (isUndefined(global.fncVacia)){
-	global.fncVacia=fncVacia;
-}
-if (isUndefined(global.fncVacia)){
-	global.fncVacia=fncVacia;
 }
 if (isUndefined(global.fncVacia)){
 	global.fncVacia=fncVacia;

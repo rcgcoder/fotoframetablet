@@ -1,8 +1,7 @@
 'use strict';
 
-class Fases{
+class TiposFases{
 	constructor(dynobjBase){
-		dynobjBase.generarTipos=this.generarTipos;
 		dynobjBase.funciones.add("generarTipo",this.generarTipo);
 	}
 
@@ -25,15 +24,8 @@ class Fases{
 				newFase.simular=fases.simularFase;
 				return newFase;
 			};
-		});
-
-	generarTipos(dynobjFases){
-		var auxFases=dynobjFases;
-		this.listado.recorrer(function(tipoFase){
-			tipoFase.generarTipo(auxFases);
-		});
-		}
+	}
 }
 
 
-module.exports=Fases;
+module.exports=TiposFases;

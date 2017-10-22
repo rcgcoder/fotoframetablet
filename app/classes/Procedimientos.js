@@ -1,10 +1,10 @@
 'use strict';
 
-class procedimientos{
+class Procedimientos{
 	constructor(dynobjBase){
 		dynobjBase.funciones.add("genEstadisticas",this.genEstadisticas);
 	}
-	procedimientos.funciones.add("genEstadisticas",function(){
+	genEstadisticas(){
 		log("listando Estadisticas del Procedimiento:"+this.id);
 		var i=0;
 		var estadisticasTotales=factoriaHashMaps.newHashMap();

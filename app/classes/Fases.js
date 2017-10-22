@@ -1,17 +1,22 @@
 'use strict';
-var DynamicObjectUtils = require('DynamicObjectUtils');
 
 class Fases{
-	newFases(nombre,isGlobal){
-		newDynamicObjectFactory(nombre,isGlobal,arrAtributosListado,arrAtributos,arrAtributosPorcs,sDefinitionFile){		
-		
-		var obj=newDynamicObjectFactory(nombre,isGlobal,[],[],[]);
-		return obj;
+	constructor(dynobjBase){
+		dynobjBase.nuevaFase=this.nuevaFase;
+		dynobjBase.simularFase=this.simularFase;
+		dynobjBase.simular=this.simular;
 	}
-		
 	nuevaFase(idTipo,procedimiento,nombre){
-			var sTipo=fases.tipos.getNombre(idTipo);
-			var objFase=fases["nuevo"+sTipo](procedimiento,nombre);
+			var tipos=this.getParentAttribute("tipos");
+			var sTipo="";
+			if (tipos!=""){
+				sTipo=tipos.attribute.getNombre(idTipo);
+			}
+			var fncNuevoTipo=this.getParentMethod("nuevo"+sTipo);
+			var objFase="";
+			if (fncNuevoTipo!=""){
+				objFase=fncNuevoTipo.object["nuevo"+sTipo](procedimiento,nombre);
+			}
 			return objFase;
 	}
 
@@ -270,7 +275,7 @@ class Fases{
 		this.listado.recorrerAsync("SimularFases",fncSimulaFase,fncFinSimulacion,false);
 
 	}
-	fases.simularFasesSiguientes=function(faseAct){
+	simularFasesSiguientes(faseAct){
 		chronometros.listar();
 		var faseAnt=faseAct.getFaseAnterior();
 		var bProcesandoHermana=false;
@@ -302,7 +307,7 @@ class Fases{
 	}
 
 
-	fases.simularRecepcionSolicitudes=function(fase){
+	simularRecepcionSolicitudes(fase){
 		log("simular Recepción Solicitudes");
 		var proc=fase.getProcedimiento();
 		var nSolicitudes=proc.getNumSolicitudes();
@@ -326,10 +331,10 @@ class Fases{
 			chronoStop();
 		}
 		procesaOffline(0,nSolicitudes,fncOperacion,"Solicitudes",function(){
-							fases.simularFasesSiguientes(fase);
+							var fnc=this.factoria.simularFasesSiguientes(fase);
 						});
 	}
-	fases.simularCrearExpediente=function(fase){
+	simularCrearExpediente(fase){
 		var proc=fase.getProcedimiento();
 		log("Procesando Creacion de Expediente -> "+ proc.id);
 		
@@ -415,49 +420,15 @@ class Fases{
 		return newFase;
 	}
 	*/
-
-
-
-	fases.childConstructor=function(){
+	childConstructor(){
 		// this es el objeto nuevo que se construye en una funcion nuevo();
 		var obj=this;
-		obj.simular=fases.simularFase;
+		obj.factoria.executeParentMethod("childConstructor");
+		obj.simular=this.factoria.simularFase;
 	}
 
 
 }
 
 module.exports=Fases;
-
-
-var fases=nuevaFactoria("Fases",true,
-					//atributos listado
-					[
-/*					"Documento",
-					"FaseSiguiente"
-*/					],
-					//atributos nombre-valor
-					[
-/*					"Tipo", 
-					"Procedimiento",		   
-					"FaseAnterior",
-					"Organismo",
-					"FechaInicio",
-					"DiasDuracion", /* 
-									 ejemplo 10 días para realización informe
-								     ejemplo 60 días para solicitudes
-									 0 todo el año (se utiliza para solicitudes que pueden llegar en cualquier momento)
-									 */ 
-/*					"TipoDocumentosReferencia", // Solicitudes
-											// Resoluciones
-											// Propuestas resolucion
-					"Porcentaje" // porcentaje de solicitudes que requieren esta fase 1 todas 0 ninguna 0.5 la mitad aleatoria
-	*/				],
-					//atributos con porcentaje
-					[
-					]
-					);
-
-
-//fases.tipos.generarTipos(); // para que se generen los tipos y las funciones basicas en la factoria.
 

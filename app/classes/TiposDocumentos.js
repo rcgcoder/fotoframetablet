@@ -2,10 +2,8 @@
 
 class TiposDocumentos{
 	constructor(dynobjBase){
-		dynobjBase.generarTipos=this.generarTipos;
 		dynobjBase.funciones.add("generarTipo",this.generarTipo);
 	}
-
 	generarTipo(dynobjFases){
 			var fases=dynobjFases;
 			var sTipo=this.id;
@@ -27,12 +25,6 @@ class TiposDocumentos{
 			};
 	}
 
-	generarTipos(dynobjFases){
-		var auxFases=dynobjFases;
-		this.listado.recorrer(function(tipoFase){
-			tipoFase.generarTipo(auxFases);
-		});
-	}
 }
 
 

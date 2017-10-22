@@ -12,6 +12,10 @@
     "jade": "*",
     "exec-async":"*",
     "hs100-api":"*",
-    "process":"*"
+    "process":"*",
+    "callsite":"*",
+    "mathjs":"*",
+    "xlsx":"*",
+    "node-fs":"*"
   }
 }

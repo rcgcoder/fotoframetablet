@@ -284,7 +284,7 @@ class ChronoFactory{
 		
 		var sLog=sTabs+ acumCronos.nombreCorto+" ("+acumCronos.veces+"),";
 		sLog+=this.traceBlock("Operaciones",acumCronos.veces);
-		sLog+=this.traceBlock("T Real",inSeconds(tReal,false),"s");
+		sLog+=this.traceBlock("T Real",inSeconds(tReal,false));
 		sLog+=this.traceBlock("T Acum",inSeconds(acumCronos.acumulado,false));
 		sLog+=this.traceBlock("% Acum",inPercent(porcTotal));
 		sLog+=this.traceBlock("T Desp",inSeconds(tDespTotal,false));

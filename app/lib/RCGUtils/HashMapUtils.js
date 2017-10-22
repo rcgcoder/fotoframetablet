@@ -1,8 +1,12 @@
 'use strict';
+/*
+Libraries are allready loaded
 var BaseUtils=require("./BaseUtils.js");
 var StringUtils=require("./StringUtils.js");
 var LogUtils=require("./LogUtils.js");
+var AsyncUtils=require("./AsyncUtils.js");
 var ChronoUtils=require("./ChronoUtils.js");
+*/
 
 class FactoriaHashMaps{
 		constructor(){
@@ -29,6 +33,7 @@ class FactoriaHashMaps{
 			obj.findMinClave=this.findMinClave;
 			obj.findPos=this.findPos;
 			obj.getValor=this.getValor;
+			obj.setValor=this.setValor;
 			obj.getValorByAttr=this.getValorByAttr;
 			obj.exists=this.exists;
 			obj.find=this.find;
@@ -276,6 +281,14 @@ class FactoriaHashMaps{
 					return "";
 				}
 			}
+		setValor(clave,newValue){
+			var pos=this.findPos(clave);
+			if (pos.clave==clave){
+				pos.valor=newValue;
+			} else {
+				add(clave,newValue);
+			}
+		}
 		getValorByAttr(nombreFuncionAtributo,valorBuscado){
 			var arrResults=[];
 			var nodAux=this.getPrimero();
@@ -546,16 +559,16 @@ class FactoriaHashMaps{
 			var nodAux=this.getPrimero();
 			var bContinuar=true;
 			while ((nodAux!="")&&bContinuar){
-				bContinuar=(callNodo(nodAux.valor,iProf)==false?false:true);
+				bContinuar=(callNodo(nodAux.valor,iProf,nodAux.clave)==false?false:true);
 				
 				for (var i=0;(i<nodAux.hermanos.length)&&bContinuar;i++){
-					bContinuar=(callNodo(nodAux.hermanos[i].valor,iProf)==false?false:true);
+					bContinuar=(callNodo(nodAux.hermanos[i].valor,iProf,nodAux.clave)==false?false:true);
 				}
 				nodAux=nodAux.siguiente;
 			}
 		}
 		stepAsync(){
-			var nNiveles=factoriaHashMaps.pilaAsyncCalls.length();
+			var nNiveles=hashmapFactory.pilaAsyncCalls.length();
 			if (nNiveles>0) { 
 				var bPara=false;
 				var initTimestamp=new Date().getTime();
@@ -572,7 +585,7 @@ class FactoriaHashMaps{
 				var nodAux; // para tipos recorre
 				var indAct=0,indMin,indMax; // para tipos bucle 
 				while ((!bPara)&&(!bFinaliza)){
-					objStep=factoriaHashMaps.pilaAsyncCalls.top();
+					objStep=hashmapFactory.pilaAsyncCalls.top();
 					if (bPrimero){
 						callEnd=objStep.callEnd;
 						segsBucle=objStep.segsBucle;
@@ -614,60 +627,65 @@ class FactoriaHashMaps{
 						if (typeof vResult!=="undefined"){
 							bFinaliza=!vResult;
 						}
-						bPara=(nNiveles!=factoriaHashMaps.pilaAsyncCalls.length());
+						bPara=(nNiveles!=hashmapFactory.pilaAsyncCalls.length());
 						if (!bPara){
 							bPara=((new Date().getTime()-initTimestamp)>segsBucle);
 						}
 					}
 				}
 //				if (objStep!=""){
-					factoriaHashMaps.pilaAsyncCalls.recorrer(function (auxObjStep){
-						factoriaHashMaps.asyncCallBloques(auxObjStep);
-					});
+				hashmapFactory.pilaAsyncCalls.recorrer(
+							function (auxObjStep){
+								hashmapFactory.asyncCallBloques(auxObjStep);
+							});
 //				}
 				if (bFinaliza) { // final del recorrer
+					var theParent=this;
 					setTimeout(function(){
-						var objStepAux=factoriaHashMaps.pilaAsyncCalls.top();
+						var objStepAux=hashmapFactory.pilaAsyncCalls.top();
 						if (objStepAux==objStep){
-							factoriaHashMaps.pilaAsyncCalls.pop();
+							hashmapFactory.pilaAsyncCalls.pop();
 							// ultimo bloque
 							if (typeof callEnd!=="undefined"){
 								callEnd(objStep);
 							}
-							if (factoriaHashMaps.pilaAsyncCalls.length()>0){
-								factoriaHashMaps.stepAsync();	
+							if (isDefined(objStep.barrier)){
+								objStep.barrier.finish(objStep.hashmap);
+							}
+							if (hashmapFactory.pilaAsyncCalls.length()>0){
+								hashmapFactory.stepAsync();	
 							}
 						} else {
 							log("Se salta este paso porque el TOP no coincide con el que se esta procesando");
 						}
 					});
 				} else {
-					if (nNiveles==factoriaHashMaps.pilaAsyncCalls.length()){ // hay bloques porque el proceso hijo no tiene actividad asincrona
+					if (nNiveles==hashmapFactory.pilaAsyncCalls.length()){ // hay bloques porque el proceso hijo no tiene actividad asincrona
 						setTimeout(function(){ // siguiente bloque
-							factoriaHashMaps.stepAsync();	
+							hashmapFactory.stepAsync();	
 						});
 					}
 				}
 			}
 		}
 		asyncWait(){
-			factoriaHashMaps.pilaAsyncCalls.push("WAIT");
+			hashmapFactory.pilaAsyncCalls.push("WAIT");
 		}
 		asyncResume(){
-			var lastElem=factoriaHashMaps.pilaAsyncCalls.pop();
+			var lastElem=hashmapFactory.pilaAsyncCalls.pop();
 			if (lastElem!="WAIT"){
 				log("Error al continuar un proceso asinchrono");
 			} else {
 				setTimeout(function(){
-					factoriaHashMaps.stepAsync();
+					hashmapFactory.stepAsync();
 				});
 			}
 		}
 		asyncDefaultCallBloquePercent(objStep){
-			factoriaHashMaps.asyncLogBloque(objStep);
+			hashmapFactory.asyncLogBloque(objStep);
 		}
 		asyncDefaultCallBloqueTime(objStep){
-			factoriaHashMaps.asyncLogBloque(objStep);
+			hashmapFactory.asyncLogBloque(objStep);
 		}
 		asyncLogBloque(objStep){
 			var sCad=objStep.tipo+" "+objStep.nombre+" ind. Actual:"+objStep.indice+ " ["+objStep.indMin+","+objStep.indMax+"] "
@@ -682,7 +700,7 @@ class FactoriaHashMaps{
 					+ "\n Bloques Porcentaje:"+objStep.nBloquePorc+ (objStep.nBloquePorc>0?" ("+(objStep.opsProcesadas/objStep.nBloquePorc).toFixed(2)+" ops/%)":"")
 					+ "\n Anidamiento:"+objStep.profundidad;
 			var sProfundidad="";
-			factoriaHashMaps.pilaAsyncCalls.recorrer(function(stepAux){
+			hashmapFactory.pilaAsyncCalls.recorrer(function(stepAux){
 				if (stepAux.profundidad<objStep.profundidad){
 					sProfundidad+="["+stepAux.tipo+" "+stepAux.nombre+"("+stepAux.indice+")]";
 				}
@@ -756,17 +774,20 @@ class FactoriaHashMaps{
 				}
 			}
 		}
-		recorrerAsync(sNombre,callNodo,callEnd,callBloquePercent,callBloqueTime,segsBucle,hsOtrosParams){
-			if (factoriaHashMaps.pilaAsyncCalls==""){
-				factoriaHashMaps.pilaAsyncCalls=factoriaHashMaps.newHashMap();
+		recorrerAsync(sNombre,callNodo,callEnd,callBloquePercent,callBloqueTime,segsBucle,hsOtrosParams,barrier){
+			if (isDefined(barrier)){
+				barrier.start(this);
+			}
+			if (hashmapFactory.pilaAsyncCalls==""){
+				hashmapFactory.pilaAsyncCalls=newHashMap();
 			}
 			var nodAux=this.getPrimero();
 			var sBloq=3;
 			if (typeof segsBucle!=="undefined"){
 				sBloq=segsBucle;
 			}
-			var auxCallBloquePercent=factoriaHashMaps.asyncDefaultCallBloquePercent;
-			var auxCallBloqueTime=factoriaHashMaps.asyncDefaultCallBloqueTime;
+			var auxCallBloquePercent=hashmapFactory.asyncDefaultCallBloquePercent;
+			var auxCallBloqueTime=hashmapFactory.asyncDefaultCallBloqueTime;
 			
 			if (typeof callBloquePercent!=="undefined"){
 				if (callBloquePercent==false){
@@ -788,7 +809,7 @@ class FactoriaHashMaps{
 			var objStep={nombre:sNombre,tipo:"Recorre",valor:""
 							,nodoActual:""
 							,nodoSiguiente:nodAux,hashmap:this,indice:0,indMin:0,indMax:this.length()
-							,profundidad:factoriaHashMaps.pilaAsyncCalls.length()
+							,profundidad:hashmapFactory.pilaAsyncCalls.length()
 							,callItem:callNodo,callEnd:callEnd
 							,initTimestamp:new Date().getTime()
 							,lastBloqueTime:0
@@ -806,23 +827,27 @@ class FactoriaHashMaps{
 							,nBloquePorc:0
 							,nBloqueTime:0
 							,hsOtrosParametros:hsOtrosParams
+							,barrier:barrier
 							};
-			factoriaHashMaps.pilaAsyncCalls.push(objStep);
+			hashmapFactory.pilaAsyncCalls.push(objStep);
 //			setTimeout(function(){
-				factoriaHashMaps.stepAsync();
+			hashmapFactory.stepAsync();
 //			});
 		}
 		bucleAsync(sNombre,indiceInicial,indiceFinal,callItem,callEnd
-										,callBloquePercent,callBloqueTime,segsBucle,hsOtrosParams){
-			if (factoriaHashMaps.pilaAsyncCalls==""){
-				factoriaHashMaps.pilaAsyncCalls=factoriaHashMaps.newHashMap();
+										,callBloquePercent,callBloqueTime,segsBucle,hsOtrosParams,barrier){
+			if (isDefined(barrier)){
+				barrier.start(this);
+			}
+			if (hashmapFactory.pilaAsyncCalls==""){
+				hashmapFactory.pilaAsyncCalls=newHashMap();
 			}
 			var sBloq=3;
 			if (typeof segsBucle!=="undefined"){
 				sBloq=segsBucle;
 			}
-			var auxCallBloquePercent=factoriaHashMaps.asyncDefaultCallBloquePercent;
-			var auxCallBloqueTime=factoriaHashMaps.asyncDefaultCallBloqueTime;
+			var auxCallBloquePercent=hashmapFactory.asyncDefaultCallBloquePercent;
+			var auxCallBloqueTime=hashmapFactory.asyncDefaultCallBloqueTime;
 
 			if (typeof callBloquePercent!=="undefined"){
 				if (callBloquePercent==false){
@@ -839,7 +864,7 @@ class FactoriaHashMaps{
 				}
 			}
 			var objStep={nombre:sNombre,tipo:"Bucle",valor:indiceInicial,indice:indiceInicial,indMin:indiceInicial,indMax:indiceFinal
-							,profundidad:factoriaHashMaps.pilaAsyncCalls.length()
+							,profundidad:hashmapFactory.pilaAsyncCalls.length()
 							,callItem:callItem
 							,callEnd:callEnd
 							,initTimestamp:new Date().getTime()
@@ -858,10 +883,11 @@ class FactoriaHashMaps{
 							,nBloquePorc:0
 							,nBloqueTime:0
 							,hsOtrosParametros:hsOtrosParams
+							,barrier:barrier
 							};
-			factoriaHashMaps.pilaAsyncCalls.push(objStep);
+			hashmapFactory.pilaAsyncCalls.push(objStep);
 //			setTimeout(function(){
-				factoriaHashMaps.stepAsync();
+			hashmapFactory.stepAsync();
 //			});
 		}
 
@@ -1391,7 +1417,7 @@ class FactoriaHashMaps{
 				var antAux;
 				chronoStart("Buscar",clave);
 				var pos=this.findPos(clave);
-				chronoStopFunction();
+				chronoStop();
 				if (pos.clave!=clave){
 					chronoStopFunction();
 					return "";
@@ -1414,7 +1440,7 @@ class FactoriaHashMaps{
 						pos.anterior.siguiente=pos.siguiente;
 					} else if (pos.siguiente!=""){
 						pos.siguiente.anterior="";
-					} else {
+					} else if (pos.anterior!=""){
 						pos.anterior.siguiente="";
 					}
 					
@@ -1443,13 +1469,13 @@ class FactoriaHashMaps{
 								if (antAux.izquierda!=""){ // si el nuevo izquierdo es nodo
 		//							chronoStart("Nodo Asignado",antAux.izquierda.clave);
 									antAux.izquierda.padre=antAux; // asignamos el sustituto como padre
-		//							chronoStopFunction();
+		//							chronoStop();
 								}
 							} else {
 								alert("Error al eliminar nodo.. el Menor de los Mayores no debería tener IZQUIERDO:"+clave);
 								vUndef.peta("MegaError");
 							}
-							chronoStopFunction();
+							chronoStop();
 							chronoStart("Asignamos_dcha",antAux.clave);
 							// si el nodo a sustitutir tenia nodos a la derecha hay que ponerlos a la derecha del sustituto
 							// if (pos.derecha!=""){ // el nodo a sustituir en esta rama siempre tiene nodos a la derecha
@@ -1458,9 +1484,9 @@ class FactoriaHashMaps{
 									antAux.derecha.padre=antAux;
 								}
 							//}
-							chronoStopFunction();
+							chronoStop();
 							this.updateNumHijos(elPadre,1+antAux.hermanos.length);
-							chronoStopFunction();
+							chronoStop();
 						} else {
 							chronoStart("Sustituye_por_hijoderecho",antAux.clave);
 							// si el nodo derecho no tiene hijos izquierdos. ponemos el hijo derecho como sustituto del nodo a eliminar
@@ -1468,9 +1494,9 @@ class FactoriaHashMaps{
 							if (antAux.izquierda!=""){
 								chronoStart("Nodo Asignado",antAux.izquierda.clave);
 								antAux.izquierda.padre=antAux;
-								chronoStopFunction();
+								chronoStop();
 							}
-							chronoStopFunction();
+							chronoStop();
 						}
 						chronoStart("updateNodos",antAux.clave+"_Padre_"+antAux.padre.clave);
 						antAux.padre=elPadre;
@@ -1481,19 +1507,19 @@ class FactoriaHashMaps{
 						//this.updateNumHijos(elPadre,1);
 						this.refreshNumHijos(antAux);
 						//this.refreshNumHijos(elPadre);
-						chronoStopFunction();
-						chronoStopFunction();
+						chronoStop();
+						chronoStop();
 					} else { // si no tiene mayores simplemente subiremos el nodo izquierdo
 						antAux=pos.izquierda;
 						chronoStart("Sustituye_por_hijoizquierdo",antAux.clave);
 						this.changePadre(elPadre,pos,antAux);
 						//this.updateNumHijos(elPadre,-(1+pos.hermanos.length));
 						this.refreshNumHijos(antAux);
-						chronoStopFunction();
+						chronoStop();
 					}
 					if (pos.padre==""){ //si el borrado es el raiz la nueva raiz será antAux;
 						this.raiz=antAux;
-						chronoStopFunction();
+						chronoStop();
 					} 
 		//			chronoStopFunction();
 		//			chronoStopFunction();
@@ -1519,7 +1545,7 @@ class FactoriaHashMaps{
 			}
 	}	 
 
-global.hasmapFactory=new FactoriaHashMaps(); 	
+global.hashmapFactory=new FactoriaHashMaps(); 	
 
 class HashMapUtils{
 	constructor(){
@@ -1527,7 +1553,7 @@ class HashMapUtils{
 	}
 	newHashMap(){
 //		log("Start Chrono:"+sNombre);
-		return hasmapFactory.newHashMap();
+		return hashmapFactory.newHashMap();
 	}
 }
 
