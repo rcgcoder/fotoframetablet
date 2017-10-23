@@ -1,5 +1,6 @@
 'use strict';
-
+const RCGUtils=require('./lib/RCGUtils/RCGUtils.js');
+var rcgutils=new RCGUtils();
 //const express    = require('express');
 //const bodyParser = require('body-parser');
 //const morgan     = require('morgan');
