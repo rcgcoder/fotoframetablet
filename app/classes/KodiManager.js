@@ -3,13 +3,29 @@ var execAsync = require('exec-async' );
 const sCmdActivateScreenSaver="ActivateScreenSaver";
 const sCommand='kodi-send --host=__IP__ --action="__COMMAND__"';
 let script = "echo \'hello\' $(whoami)\nls -l\necho 'bye'";
-exports.KodiManager = class KodiManager {
-  constructor(mainManager) {
-    var self = this;
-    self.mainManager=mainManager;
-    self.ip=self.mainManager.config.tablet.ip;
-  };
 
+class KodiManager {
+	
+  constructor(dynobjBase) {//mainManager
+	    var self = this;
+	    dynobjBase.addAtributo("Config","Configuracion","Valor");
+	    dynobjBase.addAtributo("MainManager","Gestor","Valor");
+	    dynobjBase.addAtributo("KodiIP","IP del Kodi","Valor");
+		dynobjBase.funciones.add("on",this.on);
+		dynobjBase.funciones.add("off",this.off);
+		dynobjBase.funciones.add("isOn",this.isOn);
+		dynobjBase.funciones.add("isOff",this.isOff);
+		dynobjBase.funciones.add("info",this.info);
+		dynobjBase.funciones.add("initialize",this.initialize);
+
+  }
+  initialize(objConfig,objMainManager){
+	  this.setMainManager(objMainManager);
+	  this.setConfig(objConfig);
+	    //self.ip=self.mainManager.config.tablet.ip;
+
+	  this.setPlugIP(objConfig.ip);
+  }
   executeKodiCommand(sKodiCommand){
 	  var self=this;
 	  var action=self.mainManager.startAction("executing Kodi command:"+sKodiCommand);
@@ -81,3 +97,4 @@ exports.KodiManager = class KodiManager {
   }
   
 };
+module.exports = KodiManager;

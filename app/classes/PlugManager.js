@@ -1,14 +1,32 @@
 'use strict';
-exports.PlugManager=class PlugManager {
-  constructor(mainManager) {
+const Hs100Api = require('hs100-api');
+const hs100Client = new self.Hs100Api.Client();
+
+class PlugManager {
+  constructor(dynobjBase) {//mainManager
     var self = this;
-    self.mainManager=mainManager;
-    self.Hs100Api = require('hs100-api');
-    self.client = new self.Hs100Api.Client();
-    self.ip=ip;
-    self.plug=client.getPlug({host: mainManager.config.plug.ip});
+    dynobjBase.addAtributo("Config","Configuracion","Valor");
+    dynobjBase.addAtributo("MainManager","Gestor","Valor");
+    dynobjBase.addAtributo("Plug","Enchufe","Valor");
+    dynobjBase.addAtributo("PlugIP","IP del Enchufe","Valor");
+	dynobjBase.funciones.add("on",this.on);
+	dynobjBase.funciones.add("off",this.off);
+	dynobjBase.funciones.add("isOn",this.isOn);
+	dynobjBase.funciones.add("isOff",this.isOff);
+	dynobjBase.funciones.add("info",this.info);
+	dynobjBase.funciones.add("initialize",this.initialize);
+
   }
-  
+  initialize(objConfig,objMainManager){
+//    self.mainManager=mainManager;
+//    self.ip=ip;
+//    self.plug=hs100Client.getPlug({host: mainManager.config.plug.ip});
+	  this.setMainManager(objMainManager);
+	  this.setConfig(objConfig);
+	  this.setPlugIP(objConfig.ip);
+	  var hs100Plug=hs100Client.getPlug({host: this.getIP()});
+	  this.setPlug(hs100Plug);
+  }
   
   on(){
 	  var self=this;
@@ -59,3 +77,4 @@ exports.PlugManager=class PlugManager {
   
 };
 
+module.exports=PlugManager;
