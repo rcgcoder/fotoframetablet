@@ -1,5 +1,5 @@
 'use strict';
-var StackUtils=require("./StackUtils.js");
+//var StackUtils=require("./StackUtils.js");
 
 function isMethod(variable){
 	return (typeof variable === 'function');
